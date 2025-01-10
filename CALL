@@ -1,0 +1,11 @@
+Sub Tout_tester()
+    Call Creation_Table_Monetary_Index
+    Call Creation_Table_Issuance_Static_Data
+    Call Creation_Table_Issuance_Rate_Data
+    Call Creation_Table_Issuance_Dynamic_Data
+    Call Remplissage_MONETARY_INDEX
+    Call Remplissage_ISSUANCE_STATIC_DATA
+    Call Remplissage_ISSUANCE_RATE_DATA
+    Call Remplissage_ISSUANCE_DYNAMIC_DATA
+End Sub
+
