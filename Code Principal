@@ -1,0 +1,569 @@
+Option Explicit
+Option Base 1
+
+Public Const sFullPath As String = "C:\Users\amoni\OneDrive\COURS\L3\S2\VBA\projet fini\Database2.accdb"
+
+Sub create_base()
+    Dim sConnectStr As String
+    Dim adoCat As Object
+    Dim NameDb As String
+    Dim sPathDB As String
+    Dim chemin As String
+    
+    ' Nom de la base de données
+    NameDb = "Projet"
+    ' Pour cérifier si la base de données existe déjà
+    If Not base(sFullPath) Then
+        ' Pour créer la connexion à Access et définir le chemin de la base de données
+        Set adoCat = CreateObject("ADOX.Catalog")
+        sConnectStr = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath
+        ' Pour créer la base de données
+        adoCat.Create sConnectStr
+        Set adoCat = Nothing
+    End If
+End Sub
+
+
+Public Sub Creation_Table_Monetary_Index()
+    
+    Dim objConnexion As ADODB.Connection
+    Dim strRequeteSQL As String
+    
+    ' Pour initialiser la connexion
+    Set objConnexion = New ADODB.Connection
+    objConnexion.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    ' Pour vérifier si la table existe déjà et supprimer si besoin
+    If Table(objConnexion, "MONETARY_INDEX") Then
+        objConnexion.Execute "DROP TABLE MONETARY_INDEX"
+    End If
+    ' Construction de la requête SQL pour créer la table MONETARY_INDEX
+    strRequeteSQL = "CREATE TABLE MONETARY_INDEX (" & _
+           "MI_DATE DATE, " & _
+           "MI_EON DOUBLE, " & _
+           "MI_EST DOUBLE, " & _
+           "MI_E3M DOUBLE, " & _
+           "MI_L3M_USD DOUBLE, " & _
+           "MI_FF DOUBLE, " & _
+           "MI_SON DOUBLE)"
+    
+    ' Gestion des erreurs
+    On Error GoTo ErrHandler
+    ' Exécuter la requête
+    objConnexion.Execute strRequeteSQL
+    MsgBox "La table MONETARY_INDEX a été créée."
+    ' Fermer la connexion
+    If Not objConnexion Is Nothing Then
+        If objConnexion.State = adStateOpen Then objConnexion.Close
+    End If
+    Set objConnexion = Nothing
+    Exit Sub
+ErrHandler:
+    ' Pour afficher le message d'erreur si quelque chose ne va pas
+    MsgBox "Il y a eu une erreur lors de la création de la table MONETARY_INDEX : " & Err.Description
+    GoTo CleanUp
+CleanUp:
+    ' Fermeture la connexion
+    If Not objConnexion Is Nothing Then
+        If objConnexion.State = adStateOpen Then objConnexion.Close
+        Set objConnexion = Nothing
+    End If
+    Exit Sub
+End Sub
+
+
+Public Sub Remplissage_MONETARY_INDEX()
+    
+    ' Variables pour le remplissage de la table des indices
+    Dim wbClasseur As Workbook
+    Dim wsFeuille As Worksheet
+    Dim rgPlage As Range
+    Dim objConnexion As Object ' ADODB.Connection
+    Dim strRequete As String
+    Dim indiceI As Integer
+    Dim indiceJ As Integer
+    Dim strValeur As String
+    
+    ' Gel de l'écran
+    Application.ScreenUpdating = False
+    
+    ' Choix et ouverture du fichier de données
+    Set wbClasseur = ThisWorkbook ' Classeur contenant le code VBA
+    Set wsFeuille = wbClasseur.Sheets(2) ' Utilisez la première feuille du classeur
+    
+    ' Définition de la plage de données à insérer
+    Set rgPlage = wsFeuille.UsedRange
+    
+    
+    ' Initialisation de la connexion à la base de données
+    Set objConnexion = CreateObject("ADODB.Connection")
+    objConnexion.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    
+    ' Nom de la table à remplir
+    Dim nomTable As String
+    nomTable = "MONETARY_INDEX"
+    
+    ' Boucle pour remplir la table
+    For indiceI = 2 To rgPlage.Rows.Count ' Commence à la ligne 2 car la ligne 1 contient les en-têtes
+        
+        ' Construction de la requête SQL d'insertion
+        strRequete = "INSERT INTO " & nomTable & " VALUES ("
+        For indiceJ = 1 To rgPlage.Columns.Count
+            strValeur = rgPlage.Cells(indiceI, indiceJ).Value
+            
+            If strValeur = "" Then
+                strValeur = "NULL"
+            Else
+                strValeur = "'" & strValeur & "'"
+            End If
+            
+            strRequete = strRequete & strValeur & ", "
+        Next indiceJ
+        strRequete = Left(strRequete, Len(strRequete) - 2) & ")" 'Suppression de la virgule finale et fermeture de la parenthèse
+        
+        ' Exécution de la requête SQL
+        objConnexion.Execute strRequete
+    Next indiceI
+    
+    ' Fermeture de la connexion à la base de données
+    objConnexion.Close
+    
+    ' Dégel de l'écran
+    Application.ScreenUpdating = True
+    
+    MsgBox "Les données ont été insérées dans la table " & nomTable & ".", vbInformation
+End Sub
+
+
+
+Public Sub Creation_Table_Issuance_Static_Data()
+    ' Déclaration des variables
+    
+    Dim objConnexion As ADODB.Connection
+    Dim strRequeteSQL As String
+    
+    ' Initialisation de la connexion
+    Set objConnexion = New ADODB.Connection
+    objConnexion.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    
+    ' Vérifier si la table existe déjà et supprimer si nécessaire
+    If Table(objConnexion, "ISSUANCE_STATIC_DATA") Then
+        objConnexion.Execute "DROP TABLE ISSUANCE_STATIC_DATA"
+    End If
+    
+    ' Construction de la requête SQL pour créer la table ISSUANCE_STATIC_DATA
+    strRequeteSQL = "CREATE TABLE ISSUANCE_STATIC_DATA (" & _
+           "ISD_ISIN TEXT, " & _
+           "ISD_ISSUE_DATE DATE, " & _
+           "ISD_MATURITY_DATE DATE, " & _
+           "ISD_ISSUE_PRICE DOUBLE, " & _
+           "ISD_CCY TEXT, " & _
+           "ISD_RATE TEXT, " & _
+           "ISD_SPREAD DOUBLE)"
+    
+    ' Gestion des erreurs
+    On Error GoTo ErrHandler
+    
+    ' Exécution de la requête
+    objConnexion.Execute strRequeteSQL
+    
+    MsgBox "La table ISSUANCE_STATIC_DATA a été créée.", vbInformation
+    GoTo CleanUp
+
+ErrHandler:
+    ' Afficher le message d'erreur si quelque chose ne va pas
+    MsgBox "Il y a eu une erreur lors de la création de la table ISSUANCE_STATIC_DATA : " & Err.Description, vbExclamation
+    GoTo CleanUp
+
+CleanUp:
+    ' Fermer la connexion
+    If Not objConnexion Is Nothing Then
+        If objConnexion.State = adStateOpen Then objConnexion.Close
+        Set objConnexion = Nothing
+    End If
+    Exit Sub
+End Sub
+
+
+
+Public Sub Remplissage_ISSUANCE_STATIC_DATA()
+    
+    ' Variables pour le remplissage de la table ISSUANCE_STATIC_DATA
+    Dim wbClasseur As Workbook
+    Dim wsFeuilleDonnees As Worksheet
+    Dim rgPlageDonnees As Range
+    Dim objConnexion As Object ' ADODB.Connection
+    Dim strRequeteSQL As String
+    Dim cheminBaseDonnees As String
+    Dim indiceLigne As Integer
+    Dim indiceColonne As Integer
+    Dim valeurCellule As String
+    
+    ' Gel de l'écran
+    Application.ScreenUpdating = False
+    
+    ' Choix et ouverture du fichier de données
+    Set wbClasseur = ThisWorkbook ' Classeur contenant le code VBA
+    Set wsFeuilleDonnees = wbClasseur.Sheets(3) ' Utilisez la troisième feuille du classeur
+    
+    ' Définition de la plage de données à insérer
+    Set rgPlageDonnees = wsFeuilleDonnees.UsedRange
+    Set rgPlageDonnees = rgPlageDonnees.Offset(1, 0).Resize(rgPlageDonnees.Rows.Count - 1, rgPlageDonnees.Columns.Count) ' Exclut la première ligne (en-têtes)
+    
+    ' Initialisation de la connexion à la base de données
+    Set objConnexion = CreateObject("ADODB.Connection")
+    objConnexion.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    
+    ' Nom de la table à remplir
+    Dim nomTable As String
+    nomTable = "ISSUANCE_STATIC_DATA"
+    
+    ' Boucle pour remplir la table
+    For indiceLigne = 1 To rgPlageDonnees.Rows.Count ' Commence à la ligne 1
+        
+        ' Construction de la requête SQL d'insertion
+        strRequeteSQL = "INSERT INTO " & nomTable & " VALUES ("
+        For indiceColonne = 1 To rgPlageDonnees.Columns.Count
+            valeurCellule = rgPlageDonnees.Cells(indiceLigne, indiceColonne).Value
+            
+            If valeurCellule = "" Then
+                valeurCellule = "NULL"
+            Else
+                valeurCellule = "'" & valeurCellule & "'"
+            End If
+            
+            strRequeteSQL = strRequeteSQL & valeurCellule & ", "
+        Next indiceColonne
+        strRequeteSQL = Left(strRequeteSQL, Len(strRequeteSQL) - 2) & ")" 'Suppression de la virgule finale et fermeture de la parenthèse
+        
+        ' Exécution de la requête SQL
+        objConnexion.Execute strRequeteSQL
+    Next indiceLigne
+    
+    ' Fermeture de la connexion à la base de données
+    objConnexion.Close
+    
+    ' Dégel de l'écran
+    Application.ScreenUpdating = True
+    
+    MsgBox "Les données ont été insérées dans la table " & nomTable & ".", vbInformation
+End Sub
+
+Public Sub Creation_Table_Issuance_Rate_Data()
+    
+    Dim objConnexion As ADODB.Connection
+    Dim strRequeteSQL As String
+    
+    ' Pour initialiser la connexion
+    Set objConnexion = New ADODB.Connection
+    objConnexion.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    ' Pour vérifier si la table existe déjà et supprimer si nécessaire
+    If Table(objConnexion, "ISSUANCE_RATE_DATA") Then
+        objConnexion.Execute "DROP TABLE ISSUANCE_RATE_DATA"
+    End If
+    ' Pour construire la requête SQL pour créer la table ISSUANCE_RATE_DATA
+    strRequeteSQL = "CREATE TABLE ISSUANCE_RATE_DATA (" & _
+           "IRD_ISIN TEXT, " & _
+           "IRD_DATE DATE, " & _
+           "IRD_RATE TEXT, " & _
+           "IRD_SPREAD DOUBLE)"
+    ' Gestion des erreurs
+    On Error GoTo ErrHandler
+    ' Exécution de la requête
+    objConnexion.Execute strRequeteSQL
+    MsgBox "La table ISSUANCE_RATE_DATA a été créée.", vbInformation
+    GoTo CleanUp
+
+ErrHandler:
+    ' Pour afficher le message d'erreur si quelque chose ne va pas
+    MsgBox "Il y a une erreur lors de la création de la table ISSUANCE_RATE_DATA : " & Err.Description, vbExclamation
+    GoTo CleanUp
+
+CleanUp:
+    ' Fermeture de la connexion
+    If Not objConnexion Is Nothing Then
+        If objConnexion.State = adStateOpen Then objConnexion.Close
+        Set objConnexion = Nothing
+    End If
+    Exit Sub
+End Sub
+
+
+
+Public Sub Remplissage_ISSUANCE_RATE_DATA()
+    
+    ' Variables pour le remplissage de la table ISSUANCE_RATE_DATA
+    Dim wbClasseur As Workbook
+    Dim wsDonneesTaux As Worksheet
+    Dim rgPlageDonnees As Range
+    Dim objConnexion As Object ' ADODB.Connection
+    Dim strRequeteSQL As String
+    Dim cheminBaseDonnees As String
+    Dim indiceLigne As Integer
+    Dim indiceColonne As Integer
+    Dim valeurCellule As String
+    
+    ' Gel de l'écran
+    Application.ScreenUpdating = False
+    
+    ' Choix et ouverture du fichier de données
+    Set wbClasseur = ThisWorkbook ' Classeur contenant le code VBA
+    Set wsDonneesTaux = wbClasseur.Sheets(4) ' Utilisez la quatrième feuille du classeur
+    
+    ' Trouver la dernière ligne et la dernière colonne de données
+    Dim derniereLigne As Long
+    Dim derniereColonne As Long
+    derniereLigne = wsDonneesTaux.Cells(wsDonneesTaux.Rows.Count, 1).End(xlUp).Row
+    derniereColonne = wsDonneesTaux.Cells(1, wsDonneesTaux.Columns.Count).End(xlToLeft).Column
+    
+    ' Définition de la plage de données à insérer
+    Set rgPlageDonnees = wsDonneesTaux.Range("A2", wsDonneesTaux.Cells(derniereLigne, derniereColonne))
+    
+    ' Initialisation de la connexion à la base de données
+    Set objConnexion = CreateObject("ADODB.Connection")
+    objConnexion.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    
+    ' Nom de la table à remplir
+    Dim nomTable As String
+    nomTable = "ISSUANCE_RATE_DATA"
+    
+    ' Boucle pour remplir la table
+    For indiceLigne = 1 To rgPlageDonnees.Rows.Count ' Commence à la ligne 1
+
+        ' Construction de la requête SQL d'insertion
+        strRequeteSQL = "INSERT INTO " & nomTable & " VALUES ("
+        For indiceColonne = 1 To rgPlageDonnees.Columns.Count
+            valeurCellule = rgPlageDonnees.Cells(indiceLigne, indiceColonne).Value
+            
+            If valeurCellule = "" Then
+                valeurCellule = "NULL"
+            Else
+                valeurCellule = "'" & valeurCellule & "'"
+            End If
+            
+            strRequeteSQL = strRequeteSQL & valeurCellule & ", "
+        Next indiceColonne
+        strRequeteSQL = Left(strRequeteSQL, Len(strRequeteSQL) - 2) & ")" 'Suppression de la virgule finale et fermeture de la parenthèse
+        
+        ' Exécution de la requête SQL
+        objConnexion.Execute strRequeteSQL
+    Next indiceLigne
+    
+    ' Fermeture de la connexion à la base de données
+    objConnexion.Close
+    
+    ' Dégel de l'écran
+    Application.ScreenUpdating = True
+    
+    MsgBox "Les données ont été insérées dans la table " & nomTable & ".", vbInformation
+End Sub
+
+
+Public Sub Creation_Table_Issuance_Dynamic_Data()
+    
+    Dim cheminBD As String
+    Dim objConnexion As ADODB.Connection
+    Dim strRequeteSQL As String
+    ' Pour initialiser de la connexion
+    Set objConnexion = New ADODB.Connection
+    objConnexion.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    ' Pour vérifier si la table existe déjà et supprimer si besoin
+    If Table(objConnexion, "ISSUANCE_DYNAMIC_DATA") Then
+        objConnexion.Execute "DROP TABLE ISSUANCE_DYNAMIC_DATA"
+    End If
+    ' Pour construire la requête SQL pour créer la table ISSUANCE_DYNAMIC_DATA
+    strRequeteSQL = "CREATE TABLE ISSUANCE_DYNAMIC_DATA (" & _
+           "IDD_DATE DATE, " & _
+           "IDD_ISIN TEXT, " & _
+           "IDD_PRICE DOUBLE)"
+    ' Gestion des erreurs
+    On Error GoTo ErrHandler
+    ' Exécution de la requête
+    objConnexion.Execute strRequeteSQL
+    MsgBox "La table ISSUANCE_DYNAMIC_DATA a été créée.", vbInformation
+    GoTo CleanUp
+
+ErrHandler:
+    ' Afficher le message d'erreur si quelque chose ne va pas
+    MsgBox "Il y a eu une erreur lors de la création de la table ISSUANCE_DYNAMIC_DATA : " & Err.Description, vbExclamation
+    GoTo CleanUp
+
+CleanUp:
+    ' Fermer la connexion
+    If Not objConnexion Is Nothing Then
+        If objConnexion.State = adStateOpen Then objConnexion.Close
+        Set objConnexion = Nothing
+    End If
+    Exit Sub
+End Sub
+
+
+
+
+Sub Remplissage_ISSUANCE_DYNAMIC_DATA()
+    Dim cn As Object
+    Dim rs As Object
+    Dim rs_dates As Object
+    Dim strSql As String
+    Dim ISIN As String
+    Dim PricingDate As Date
+    Dim Price As Double
+    On Error GoTo ErrorHandler
+    
+    ' Connexion à la base de données
+    Set cn = CreateObject("ADODB.Connection")
+    cn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    ' Récupération de la liste des ISIN de la table STATIC DATA
+    strSql = "SELECT DISTINCT ISD_ISIN FROM ISSUANCE_STATIC_DATA"
+    Set rs = cn.Execute(strSql)
+    ' Boucle sur les ISIN
+    Do While Not rs.EOF
+        ISIN = rs("ISD_ISIN").Value
+        ' Récupération de l'ensemble des dates de la table MONETARY INDEX
+        strSql = "SELECT DISTINCT MI_DATE FROM MONETARY_INDEX"
+        Set rs_dates = cn.Execute(strSql)
+        Price = -1
+        ' Boucle sur les dates
+        Do While Not rs_dates.EOF
+            PricingDate = rs_dates("MI_DATE").Value
+            ' Appel à la fonction CalculatePrice avec ISIN
+            Price = CalculatePrice(ISIN, PricingDate, Price)
+            ' Vérifier si on a un prix ou si on a -1
+            If Price <> -1 Then
+                ' Créer un enregistrement dans la table DYNAMIC DATA avec Date, ISIN, prix
+                strSql = "INSERT INTO ISSUANCE_DYNAMIC_DATA (IDD_DATE, IDD_ISIN, IDD_PRICE) VALUES (#" & PricingDate & "#, '" & ISIN & "', " & Replace(Price, ",", ".") & ")"
+                cn.Execute strSql
+            End If
+            rs_dates.MoveNext
+        Loop
+        rs.MoveNext
+    Loop
+    ' Pour afficher un message d'alerte pour indiquer que les données ont été importées avec succès
+    MsgBox "Les données ont été importées dans la table ISSUANCE_DYNAMIC_DATA.", vbInformation
+    ' Nettoyage
+CleanUp:
+    If Not rs_dates Is Nothing Then
+        rs_dates.Close
+        Set rs_dates = Nothing
+    End If
+    If Not rs Is Nothing Then
+        rs.Close
+        Set rs = Nothing
+    End If
+    If Not cn Is Nothing Then
+        If cn.State = adStateOpen Then cn.Close
+        Set cn = Nothing
+    End If
+    Exit Sub
+ErrorHandler:
+    ' Pour afficher un message d'erreur en cas de problème lors de l'importation des données
+    MsgBox "Il y a eu une erreur qui s'est produite lors de l'importation des données dans la table ISSUANCE_DYNAMIC_DATA : " & Err.Description, vbExclamation
+    Resume CleanUp
+End Sub
+
+Public Sub Issuance_Data(ISIN As String, PricingDate As Date, ByRef issueDate As Date, ByRef maturityDate As Variant, ByRef issuePrice As Double, ByRef ccy As String, ByRef rate As String, ByRef spread As Double)
+    Dim cn As Object
+    Dim rs As Object
+    Dim strSql As String
+    
+    ' Initialisation de la connexion à la base de données
+    Set cn = CreateObject("ADODB.Connection")
+    cn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    ' Construction de la requête SQL pour récupérer les données de l'émission
+    strSql = "SELECT ISD_ISSUE_DATE, ISD_MATURITY_DATE, ISD_ISSUE_PRICE, ISD_CCY, ISD_RATE, ISD_SPREAD " _
+    & "FROM ISSUANCE_STATIC_DATA WHERE ISD_ISIN='" & ISIN & "'"
+    ' Exécution de la requête SQL
+    Set rs = cn.Execute(strSql)
+    ' Vérifier si des données ont été trouvées
+    If Not rs.EOF Then
+        issueDate = rs("ISD_ISSUE_DATE").Value
+        maturityDate = rs("ISD_MATURITY_DATE").Value
+        issuePrice = rs("ISD_ISSUE_PRICE").Value
+        ccy = rs("ISD_CCY").Value
+        rate = rs("ISD_RATE").Value
+        spread = rs("ISD_SPREAD").Value
+    Else
+        MsgBox "Aucune donnée trouvée pour l'ISIN et la date de pricing spécifiées.", vbExclamation
+    End If
+    ' Fermeture de la connexion à la base de données
+    rs.Close
+    cn.Close
+End Sub
+
+Public Sub Dynamic_Data(ISIN As String, PricingDate As Date, ByRef Price As Double)
+    Dim cn As Object
+    Dim rs As Object
+    Dim strSql As String
+     
+     ' Initialisation de la connexion à la base de données
+    Set cn = CreateObject("ADODB.Connection")
+    cn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    ' Construction de la requête SQL pour récupérer le prix dynamique
+    strSql = "SELECT IDD_PRICE FROM ISSUANCE_DYNAMIC_DATA WHERE IDD_ISIN='" & ISIN & "' AND IDD_DATE=#" & PricingDate & "#"
+    ' Exécution de la requête SQL
+    Set rs = cn.Execute(strSql)
+    ' Vérification si des données ont été trouvées
+    If Not rs.EOF Then
+        ' Récupération du prix dynamique
+        Price = rs("IDD_PRICE").Value
+    Else
+        ' Si aucune donnée n'a été trouvée, définir le prix sur 0
+        Price = 0
+        MsgBox "Aucune donnée trouvée pour l'ISIN et la date de pricing spécifiées.", vbExclamation
+    End If
+    ' Fermeture du recordset
+    rs.Close
+    ' Fermeture de la connexion à la base de données
+    cn.Close
+End Sub
+Public Sub Rerating_Data(ISIN As String)
+    Dim cn As Object
+    Dim rs As Object
+    Dim strSql As String
+    Dim ws As Worksheet
+    Dim i As Integer
+    Dim j As Integer
+    Dim reratingDateColumn As Integer
+    Dim reratingRateColumn As Integer
+    Dim reratingSpreadColumn As Integer
+    
+    ' Initialiser la connexion à la base de données
+    Set cn = CreateObject("ADODB.Connection")
+    cn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & sFullPath & ";Persist Security Info=False;"
+    ' La feuille Excel
+    Set ws = ThisWorkbook.Sheets("NOTES_TEMPLATE")
+    ' Récupérer les numéros de colonnes pour les dates, les taux et les spreads de rerating
+    reratingDateColumn = 2 ' Colonne B
+    reratingRateColumn = 3 ' Colonne C
+    reratingSpreadColumn = 4 ' Colonne D
+    ' Boucle pour parcourir les lignes où les données de rerating doivent être insérées
+    For i = 12 To 23 ' Lignes 12 à 23
+        ' Construction de la requête SQL pour récupérer les données de rerating pour l'ISIN spécifié
+        strSql = "SELECT * FROM ISSUANCE_RATE_DATA WHERE I_D_D_ISIN='" & ISIN & "'"
+        ' Exécution de la requête SQL
+        Set rs = cn.Execute(strSql)
+        ' Initialisation le compteur de ligne à 1
+        j = 1
+        ' Boucle pour parcourir les résultats de la requête
+        Do While Not rs.EOF
+            ' Pour insérer les données de rerating dans la feuille Excel
+            ws.Cells(i, reratingDateColumn).Value = rs("ReratingDate" & j).Value
+            ws.Cells(i, reratingRateColumn).Value = rs("ReratingRate" & j).Value
+            ws.Cells(i, reratingSpreadColumn).Value = rs("ReratingSpread" & j).Value
+            ' Pour passer à la ligne suivante de la feuille Excel
+            i = i + 1
+            ' Pour passer à l'enregistrement suivant de la table
+            rs.MoveNext
+            ' Pour incrémenter le compteur de ligne
+            j = j + 1
+            ' Pour sortir de la boucle si on atteint la limite de lignes de la feuille Excel ou de la table Access
+            If i > 23 Or j > 4 Then Exit Do
+        Loop
+    Next i
+    ' Pour fermer la connexion à la base de données
+    cn.Close
+End Sub
+
+
+
+
+
